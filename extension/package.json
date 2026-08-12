@@ -1,0 +1,88 @@
+{
+  "name": "vtex-mcp",
+  "displayName": "VTEX MCP",
+  "description": "Manage VTEX multi-account credentials and auto-register the bundled TypeScript vtex MCP server in Cursor.",
+  "version": "0.3.1",
+  "publisher": "vtex-mcp",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vtexMcp.addAccount",
+        "title": "VTEX: Add Account"
+      },
+      {
+        "command": "vtexMcp.editAccount",
+        "title": "VTEX: Edit Account"
+      },
+      {
+        "command": "vtexMcp.removeAccount",
+        "title": "VTEX: Remove Account"
+      },
+      {
+        "command": "vtexMcp.listAccounts",
+        "title": "VTEX: List Accounts"
+      },
+      {
+        "command": "vtexMcp.enableMcp",
+        "title": "VTEX: Enable MCP"
+      },
+      {
+        "command": "vtexMcp.disableMcp",
+        "title": "VTEX: Disable MCP"
+      },
+      {
+        "command": "vtexMcp.reregisterMcp",
+        "title": "VTEX: Re-register MCP"
+      }
+    ],
+    "configuration": {
+      "title": "VTEX MCP",
+      "properties": {
+        "vtexMcp.environment": {
+          "type": "string",
+          "default": "vtexcommercestable",
+          "description": "VTEX environment subdomain used in API base URLs."
+        },
+        "vtexMcp.autoRegister": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically register the vtex MCP server when the extension activates and when accounts change."
+        },
+        "vtexMcp.faststoreGraphqlUrl": {
+          "type": "string",
+          "default": "http://localhost:3000/api/graphql",
+          "description": "Local FastStore GraphQL BFF URL used by graphql_faststore_query."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./ && npm run build:mcp",
+    "build:mcp": "esbuild mcp/src/index.ts --bundle --platform=node --format=cjs --outfile=out-mcp/index.js --external:node:*",
+    "start:mcp": "node out-mcp/index.js",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.3"
+  }
+}

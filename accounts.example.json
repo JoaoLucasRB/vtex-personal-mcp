@@ -1,0 +1,9 @@
+{
+  "environment": "vtexcommercestable",
+  "accounts": {
+    "{account}": {
+      "appKey": "vtexappkey-{account}-XXXXXXXX",
+      "appToken": "your-app-token"
+    }
+  }
+}

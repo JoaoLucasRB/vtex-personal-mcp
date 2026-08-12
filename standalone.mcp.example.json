@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "vtex": {
+      "command": "node",
+      "args": ["C:/Projetos/vtex-mcp/extension/out-mcp/index.js"],
+      "env": {
+        "VTEX_MCP_WORKSPACE_ROOT": "C:/path/to/your-faststore-or-io-project"
+      }
+    }
+  }
+}

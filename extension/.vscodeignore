@@ -1,0 +1,9 @@
+.vscode/**
+src/**
+mcp/**
+tsconfig.json
+**/*.ts
+**/*.map
+node_modules/**
+.gitignore
+!out-mcp/**

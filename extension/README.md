@@ -24,12 +24,13 @@ Requires **Node.js 20+** on PATH.
 
 See the repository root README for the tool map.
 
-## Standalone / Claude Code
+## Standalone (no extension)
 
-No extension required — same `out-mcp/index.js` with `~/.vtex-mcp/accounts.json`. See root [README Option B](../README.md#option-b--standalone--claude-code-no-extension) and [`standalone.mcp.example.json`](../standalone.mcp.example.json).
+Use the interactive wizard (preferred for Claude Code, Codex, VS Code Copilot, etc.). Cursor extension users should **not** need this — use **VTEX: Add Account** instead.
 
 ```bash
-npm run build:mcp
-set VTEX_MCP_WORKSPACE_ROOT=C:\path\to\your-project
-npm run start:mcp
+cd C:\path\to\your-faststore-or-io-project
+npm --prefix C:\Projetos\vtex-mcp\extension run setup:mcp
 ```
+
+Details: root [README Option B](../README.md#option-b--standalone-mcp-server).

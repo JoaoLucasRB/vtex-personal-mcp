@@ -71,6 +71,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./ && npm run build:mcp",
     "build:mcp": "esbuild mcp/src/index.ts --bundle --platform=node --format=cjs --outfile=out-mcp/index.js --external:node:*",
+    "setup:mcp": "node scripts/setup-mcp.mjs",
     "start:mcp": "node out-mcp/index.js",
     "watch": "tsc -watch -p ./",
     "package": "vsce package --no-dependencies"

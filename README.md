@@ -25,6 +25,8 @@ vtex-mcp/
 ├── extension/
 │   ├── src/                   # Cursor extension + account UI
 │   ├── mcp/                   # MCP stdio server source
+│   ├── scripts/
+│   │   └── setup-mcp.mjs      # Standalone interactive setup
 │   └── out-mcp/
 │       └── index.js           # Bundled MCP entry point
 ├── accounts.example.json
@@ -40,7 +42,7 @@ The Cursor extension stores credentials in **Cursor SecretStorage**, so you do *
 ## Installation
 
 ```bash
-cd c:\Projetos\vtex-mcp\extension
+cd C:\path\to\vtex-mcp\extension
 npm install
 npm run compile
 ```
@@ -51,7 +53,7 @@ In Cursor:
 2. Select:
 
    ```text
-   c:\Projetos\vtex-mcp\extension
+   C:\path\to\vtex-mcp\extension
    ```
 
 3. Alternatively, install the packaged `.vsix`.
@@ -80,79 +82,144 @@ After installing the extension:
 
 # Option B — Standalone MCP Server
 
-The standalone mode uses the **same MCP binary**, but credentials are loaded from a file or environment variables.
-
-This mode is useful for:
+The standalone mode uses the **same MCP binary**, with credentials in `~/.vtex-mcp/accounts.json` (or env). Use this for:
 
 - Claude Code
 - OpenAI Codex
 - VS Code + GitHub Copilot
-- Cursor without the extension
+- Cursor **without** the extension
 - Claude Desktop
-- Other stdio-compatible MCP clients
+- Other stdio MCP clients
+
+> [!IMPORTANT]
+> If you use **Option A (Cursor extension)**, you do **not** need `setup:mcp`. Use **VTEX: Add Account** instead. Running both can register duplicate servers.
 
 ---
 
 ## 1. Prerequisites
 
-- **Node.js 20+** available on `PATH`
-
-  ```bash
-  node -v
-  ```
-
-- A clone of this repository, or at least the `extension/` directory built once.
+- **Node.js 20+** on `PATH` (`node -v`)
+- A clone of this repository (at least `extension/`)
+- A VTEX **AppKey / AppToken** for the store account you will open
+- Your **FastStore** or **IO** commerce project on disk
 
 ---
 
-## 2. Build the MCP Server
-
-Run the following once:
+## 2. Install dependencies (once)
 
 ```bash
-cd c:\Projetos\vtex-mcp\extension
+cd C:\path\to\vtex-mcp\extension
 npm install
-npm run build:mcp
 ```
 
-The resulting entry point is:
+The setup wizard builds `out-mcp/index.js` if it is missing.
 
-```text
-c:\Projetos\vtex-mcp\extension\out-mcp\index.js
-```
+---
 
-> [!TIP]
-> Always use an **absolute path** to `out-mcp/index.js` in client configurations.
+## 3. Run the setup wizard (recommended)
 
-### Smoke Test
+The wizard prompts for credentials, writes/merges `~/.vtex-mcp/accounts.json`, detects (or asks for) the commerce project path, and can configure selected MCP clients.
 
-This starts the server over stdio and is useful when testing with an MCP client attached:
+### Preferred — run from the commerce project (auto-detect)
+
+With your FastStore/IO project as the current directory, `VTEX_MCP_WORKSPACE_ROOT` and the account name are **usually** detected automatically:
 
 ```bash
-cd extension
+cd C:\path\to\your-faststore-or-io-project
+npm --prefix C:\path\to\vtex-mcp\extension run setup:mcp
+```
+
+### Alternate — run from the MCP repo
+
+```bash
+cd C:\path\to\vtex-mcp\extension
+npm run setup:mcp
+```
+
+If detection fails, enter the absolute path to your FastStore/IO project when prompted.
+
+### What the wizard does
+
+1. Builds `out-mcp/index.js` if needed
+2. Resolves the commerce workspace (`VTEX_MCP_WORKSPACE_ROOT` env → auto-detect from cwd → prompt)
+3. Prompts for account, AppKey, AppToken, and environment
+4. Writes/merges `~/.vtex-mcp/accounts.json`
+5. Optionally configures clients you select:
+   - Claude Code
+   - OpenAI Codex
+   - VS Code + GitHub Copilot
+   - Cursor (manual `mcp.json` only — skip if using the extension)
+
+---
+
+## 4. Restart and verify
+
+1. Restart or reload the MCP host for each client you configured
+2. Confirm VTEX tools appear (for example `get_vtex_context`)
+
+Useful checks:
+
+```bash
+claude mcp list
+codex mcp list
+```
+
+VS Code: **MCP: List Servers** → start/restart `vtex`.
+
+---
+
+## 5. Optional smoke test
+
+With a client attached (stdio):
+
+```bash
+cd C:\path\to\vtex-mcp\extension
 set VTEX_MCP_WORKSPACE_ROOT=C:\path\to\your-faststore-or-io-project
 npm run start:mcp
 ```
 
 ---
 
-# 3. Configure `accounts.json`
+## 6. Quick checklist (wizard path)
 
-Standalone mode does **not** use the Cursor **Add Account** UI.
+- [ ] `npm install` in `extension/`
+- [ ] `npm run setup:mcp` (preferably from the commerce project cwd)
+- [ ] Restart / reload the MCP client(s)
+- [ ] Verify tools such as `get_vtex_context`
 
-Instead, create a credentials file manually.
+---
 
-## 3.1 Create the Directory and File
+# Manual configuration (advanced / fallback)
 
-### Windows — PowerShell
+Use this if you prefer not to run the wizard, or need to hand-edit client configs. Complete a build first:
+
+```bash
+cd C:\path\to\vtex-mcp\extension
+npm install
+npm run build:mcp
+```
+
+Entry point (use an **absolute** path in client configs):
+
+```text
+C:\path\to\vtex-mcp\extension\out-mcp\index.js
+```
+
+---
+
+## Manual — `accounts.json`
+
+### Create the file
+
+**Windows — PowerShell:**
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.vtex-mcp"
-Copy-Item c:\Projetos\vtex-mcp\accounts.example.json "$env:USERPROFILE\.vtex-mcp\accounts.json"
+Copy-Item C:\path\to\vtex-mcp\accounts.example.json "$env:USERPROFILE\.vtex-mcp\accounts.json"
 notepad "$env:USERPROFILE\.vtex-mcp\accounts.json"
 ```
 
-### macOS / Linux
+**macOS / Linux:**
 
 ```bash
 mkdir -p ~/.vtex-mcp
@@ -160,45 +227,18 @@ cp /path/to/vtex-mcp/accounts.example.json ~/.vtex-mcp/accounts.json
 ${EDITOR:-nano} ~/.vtex-mcp/accounts.json
 ```
 
-### File Location
+Default path: `~/.vtex-mcp/accounts.json`  
+Override: `VTEX_MCP_ACCOUNTS_FILE=/absolute/path/to/accounts.json`
 
-Default:
+### Get an AppKey / AppToken
 
-```text
-~/.vtex-mcp/accounts.json
-```
+1. Open `https://{account}.myvtex.com/admin`
+2. **Account Settings → Account management → Account → Generate new app key** (or your org's equivalent)
+3. Copy App Key and App Token (token is shown once)
 
-Override the location with:
+### File shape
 
-```text
-VTEX_MCP_ACCOUNTS_FILE=/absolute/path/to/accounts.json
-```
-
----
-
-## 3.2 Get an AppKey / AppToken
-
-For each VTEX account you want to use:
-
-1. Open the VTEX Admin account:
-
-   ```text
-   https://{account}.myvtex.com/admin
-   ```
-
-2. Go to **Account Settings → Account management → Account → Generate new app key**.
-3. If your organization uses a different API key management page, use the equivalent location.
-4. Copy the **App Key** and **App Token**.
-5. Store the token securely — it is shown only once.
-
-> [!IMPORTANT]
-> The AppKey must have policies covering the APIs you intend to use, such as Catalog, OMS, Pricing, and others.
-
----
-
-## 3.3 Edit `accounts.json`
-
-The structure is based on [`accounts.example.json`](accounts.example.json):
+See [`accounts.example.json`](accounts.example.json):
 
 ```json
 {
@@ -212,99 +252,49 @@ The structure is based on [`accounts.example.json`](accounts.example.json):
 }
 ```
 
-### Configuration Reference
-
 | Field | Required | Description |
 |---|:---:|---|
-| `environment` | No | Defaults to `vtexcommercestable`. Can be overridden with `VTEX_ENVIRONMENT`. |
-| `accounts` | **Yes** | Non-empty object containing the configured VTEX accounts. |
-| `accounts.<name>.appKey` | **Yes** | AppKey. Also accepts `app_key`. |
-| `accounts.<name>.appToken` | **Yes** | AppToken. Also accepts `app_token`. |
+| `environment` | No | Defaults to `vtexcommercestable`. Override with `VTEX_ENVIRONMENT`. |
+| `accounts` | **Yes** | Non-empty object of VTEX accounts. |
+| `accounts.<name>.appKey` | **Yes** | Also accepts `app_key`. |
+| `accounts.<name>.appToken` | **Yes** | Also accepts `app_token`. |
 
-> [!NOTE]
-> The account name must match the project account discovered by the MCP from `api.storeId`, IO `vendor`, or `.vtex-mcp.json` `account`. Matching is case-insensitive.
+Account name must match the discovered project account (`api.storeId`, IO `vendor`, or `.vtex-mcp.json`). Matching is case-insensitive.
 
 > [!CAUTION]
-> **Never commit real AppTokens.**
->
-> Keep `~/.vtex-mcp/accounts.json` outside the repository, use a gitignored location, or provide credentials through environment variables.
+> Never commit real AppTokens.
+
+### Credential load order
+
+1. `VTEX_ACCOUNTS_JSON`
+2. `VTEX_MCP_ACCOUNTS_FILE` or `~/.vtex-mcp/accounts.json`
+3. Legacy: `VTEX_ACCOUNT` + `VTEX_APP_KEY` + `VTEX_APP_TOKEN` (+ optional `VTEX_ENVIRONMENT`)
+
+### Point at the commerce project
+
+Set `VTEX_MCP_WORKSPACE_ROOT=<absolute-path-to-commerce-project>` or run the MCP with that folder as cwd.
+
+Discovery order: `.vtex-mcp.json` → FastStore `discovery.config.*` `api.storeId` → IO `manifest.json` `vendor`.
+
+If the discovered account has no credentials, tools skip while the process keeps running.
 
 ---
 
-## 3.4 Credential Load Order
+## Manual — shared stdio block
 
-The MCP uses the **first source that succeeds**:
-
-1. `VTEX_ACCOUNTS_JSON` — complete JSON configuration.
-2. Accounts file:
-   - `VTEX_MCP_ACCOUNTS_FILE`, or
-   - `~/.vtex-mcp/accounts.json`
-3. Legacy environment variables:
-   - `VTEX_ACCOUNT`
-   - `VTEX_APP_KEY`
-   - `VTEX_APP_TOKEN`
-   - Optional: `VTEX_ENVIRONMENT`
-
----
-
-## 3.5 Point the MCP at the Commerce Project
-
-Account resolution is **project-only**. There is no `account=` tool argument.
-
-Set either:
-
-```text
-VTEX_MCP_WORKSPACE_ROOT=<absolute-path-to-your-commerce-project>
-```
-
-or start the MCP with the commerce project as its process **current working directory**. Some MCP clients do this automatically when the project is opened.
-
-### Project Account Discovery
-
-The MCP searches for the account in this order:
-
-1. `.vtex-mcp.json`
-
-   ```json
-   {
-     "account": "..."
-   }
-   ```
-
-2. FastStore `discovery.config.js` / `.ts`
-
-   ```text
-   api.storeId
-   ```
-
-3. IO `manifest.json`
-
-   ```text
-   vendor
-   ```
-
-> [!NOTE]
-> If the discovered account does not have an entry in `accounts.json`, the tools **skip the account** while the MCP process continues running.
-
----
-
-# 4. Shared stdio Server Configuration
-
-Every supported client ultimately runs:
+Every client ultimately runs:
 
 ```text
 node <absolute-path-to>/extension/out-mcp/index.js
 ```
 
-Optionally provide the workspace:
+with optional:
 
 ```text
 VTEX_MCP_WORKSPACE_ROOT=<absolute-path-to-your-commerce-project>
 ```
 
-## Generic Configuration
-
-The same structure is also available in [`standalone.mcp.example.json`](standalone.mcp.example.json):
+See [`standalone.mcp.example.json`](standalone.mcp.example.json):
 
 ```json
 {
@@ -322,58 +312,25 @@ The same structure is also available in [`standalone.mcp.example.json`](standalo
 }
 ```
 
-Replace both paths with your local paths.
-
-> [!TIP]
-> On Windows, prefer forward slashes or escaped backslashes in JSON configuration files.
-
 ---
 
-# 5. Install per MCP Client
+## Manual — Cursor (no extension)
 
-Complete **§2–§3** before configuring a client.
-
----
-
-## Cursor — Manual MCP
-
-Use this when running the standalone server **without the Cursor extension**.
-
-1. Build the server and configure `accounts.json`.
-2. Open or create:
-
-   ```text
-   ~/.cursor/mcp.json
-   ```
-
-   On Windows:
-
-   ```text
-   %USERPROFILE%\.cursor\mcp.json
-   ```
-
-3. Add the `mcpServers.vtex` block from §4 or `standalone.mcp.example.json`.
-4. Restart Cursor or reload MCP servers.
-5. Open your FastStore / IO project, or set `VTEX_MCP_WORKSPACE_ROOT`.
+1. Edit `~/.cursor/mcp.json` (Windows: `%USERPROFILE%\.cursor\mcp.json`)
+2. Merge the `mcpServers.vtex` block above
+3. Restart Cursor / reload MCP
+4. Open the FastStore/IO project or set `VTEX_MCP_WORKSPACE_ROOT`
 
 > [!WARNING]
-> Do not enable both the Cursor extension registration and a manually configured server for the same setup if you want a single MCP instance. Choose **extension** or **manual `mcp.json`**.
+> Do not use both the Cursor extension and a manual `mcp.json` entry for the same setup if you want a single instance.
 
-### Project-scoped Configuration
-
-You can also create:
-
-```text
-.cursor/mcp.json
-```
-
-inside the workspace using the same `mcpServers` structure.
+Project-scoped alternative: `.cursor/mcp.json` in the workspace.
 
 ---
 
-## Claude Code
+## Manual — Claude Code
 
-### CLI — Recommended
+**CLI (recommended):**
 
 ```bash
 claude mcp add --transport stdio --scope user \
@@ -381,63 +338,19 @@ claude mcp add --transport stdio --scope user \
   vtex -- node C:/Projetos/vtex-mcp/extension/out-mcp/index.js
 ```
 
-### Scopes
-
-| Scope | Storage | Shared with team? |
+| Scope | Storage | Shared? |
 |---|---|:---:|
-| `--scope user` | `~/.claude.json` | No — available across your projects |
-| `--scope local` *(default)* | `~/.claude.json` | No — scoped to the project path |
-| `--scope project` | Project `.mcp.json` | Yes — commit carefully |
+| `--scope user` | `~/.claude.json` | No |
+| `--scope local` (default) | `~/.claude.json` (per project path) | No |
+| `--scope project` | project `.mcp.json` | Yes — no secrets in shared env |
 
-> [!CAUTION]
-> Do not put secrets in environment variables inside a shared project configuration.
-
-### Project Configuration
-
-Create `.mcp.json` at the root of the commerce project or a wrapper repository:
-
-```json
-{
-  "mcpServers": {
-    "vtex": {
-      "command": "node",
-      "args": [
-        "C:/Projetos/vtex-mcp/extension/out-mcp/index.js"
-      ],
-      "env": {
-        "VTEX_MCP_WORKSPACE_ROOT": "C:/path/to/your-faststore-or-io-project"
-      }
-    }
-  }
-}
-```
-
-Verify the server:
-
-```bash
-claude mcp list
-```
-
-> [!NOTE]
-> Claude Code may ask you to approve project servers the first time you run `claude` in the project directory.
+Project `.mcp.json` uses the same `mcpServers` shape as the shared stdio block. Then: `claude mcp list`.
 
 ---
 
-## OpenAI Codex
+## Manual — OpenAI Codex
 
-Codex uses **TOML**, not JSON.
-
-Edit:
-
-```text
-~/.codex/config.toml
-```
-
-or use a trusted project configuration:
-
-```text
-.codex/config.toml
-```
+Edit `~/.codex/config.toml` (or trusted project `.codex/config.toml`):
 
 ```toml
 [mcp_servers.vtex]
@@ -448,42 +361,20 @@ args = ["C:/Projetos/vtex-mcp/extension/out-mcp/index.js"]
 VTEX_MCP_WORKSPACE_ROOT = "C:/path/to/your-faststore-or-io-project"
 ```
 
-### CLI
+Or:
 
 ```bash
 codex mcp add vtex \
   --env VTEX_MCP_WORKSPACE_ROOT=C:/path/to/your-faststore-or-io-project \
   -- node C:/Projetos/vtex-mcp/extension/out-mcp/index.js
-
 codex mcp list
 ```
 
-### Codex TUI / ChatGPT Desktop Codex UI
-
-Use:
-
-**Settings → MCP servers**
-
-or:
-
-```text
-/mcp
-```
-
-Restart the Codex host after configuration changes.
-
 ---
 
-## VS Code + GitHub Copilot
+## Manual — VS Code + GitHub Copilot
 
-1. Open the Command Palette.
-2. Select **MCP: Open User Configuration** for a global configuration, or create:
-
-   ```text
-   .vscode/mcp.json
-   ```
-
-3. VS Code uses a `servers` key instead of `mcpServers`:
+Command Palette → **MCP: Open User Configuration**, or create `.vscode/mcp.json` (note `servers`, not `mcpServers`):
 
 ```json
 {
@@ -502,56 +393,21 @@ Restart the Codex host after configuration changes.
 }
 ```
 
-4. Run **MCP: List Servers**.
-5. Start or restart `vtex`.
-6. Open Agent / Copilot Chat with tools enabled.
-7. Confirm that the VTEX tools are available.
-
-> [!NOTE]
-> Portable Copilot / Agent Host layouts may also read workspace `.mcp.json` or `~/.copilot/mcp-config.json`. If the selected configuration file supports the same schema, use the same stdio `command`, `args`, and `env` values.
+Then **MCP: List Servers** → start/restart `vtex`.
 
 ---
 
-## Claude Desktop
-
-Optional configuration:
+## Manual — Claude Desktop
 
 **Settings → Developer → Edit Config**
 
-Configuration file:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
-### macOS
-
-```text
-~/Library/Application Support/Claude/claude_desktop_config.json
-```
-
-### Windows
-
-```text
-%APPDATA%\Claude\claude_desktop_config.json
-```
-
-Use the `mcpServers` JSON block from §4.
-
-> [!IMPORTANT]
-> Fully quit and restart Claude Desktop after changing the configuration.
+Use the `mcpServers` JSON block from the shared stdio section. Fully quit and restart Claude Desktop.
 
 ---
 
-# 6. Quick Checklist
-
-Use this checklist to verify a standalone installation:
-
-- [ ] Run `npm run build:mcp` inside `extension/`
-- [ ] Create `~/.vtex-mcp/accounts.json`
-- [ ] Add the AppKey / AppToken for the project account
-- [ ] Configure the client to run `node` against the absolute `out-mcp/index.js` path
-- [ ] Set `VTEX_MCP_WORKSPACE_ROOT` or use the commerce project as the process `cwd`
-- [ ] Restart / reload the MCP host
-- [ ] Verify the VTEX tools are available, for example `get_vtex_context`
-
----
 
 # Account Resolution
 
